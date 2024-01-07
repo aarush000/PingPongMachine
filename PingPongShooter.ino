@@ -44,6 +44,7 @@ int sweep_type = 0;
 
 int top_spin_speed = 0;
 int back_spin_speed = 0;
+int side_spin_speed = 0;
 
 BLYNK_WRITE(V0) { //Spinner_Test
   int spinner_motor_speed = param.asInt();
@@ -93,12 +94,15 @@ BLYNK_WRITE(V7) { //Speed
   Blynk.virtualWrite(V14, top_angle);
   if (back_spin_speed > 0 && top_spin_speed == 0){
     back_spin(back_spin_speed);
+    side_spin(side_spin_speed);
   } else if (back_spin_speed == 0 && top_spin_speed > 0){
     top_spin(top_spin_speed);
+    side_spin(side_spin_speed);
   } else {
     forward(left_speed, LEFT_DC);
     forward(bottom_speed, BOTTOM_DC);
     forward(right_speed, RIGHT_DC);
+    side_spin(side_spin_speed);
   }
 }
 BLYNK_WRITE(V8) { //Top_Spin
@@ -110,22 +114,9 @@ BLYNK_WRITE(V9) { //Back_Spin
   back_spin(back_spin_speed);
 }
 BLYNK_WRITE(V10) { //Side_Spin
-  int side_spin_speed = param.asInt();
-  right_speed = speed;
-  left_speed = speed;
-  bottom_speed = speed;
-  if (side_spin_speed > 0){
-    right_speed = right_speed + (side_spin_speed / 2);
-    left_speed = left_speed - side_spin_speed;
-    bottom_speed  = bottom_speed - side_spin_speed;
-  } else if (side_spin_speed < 0){
-    right_speed = right_speed - side_spin_speed;
-    left_speed = left_speed + (side_spin_speed / 2);
-    bottom_speed  = bottom_speed - side_spin_speed;
-  }
-  forward(right_speed, RIGHT_DC);
-  forward(left_speed, LEFT_DC);
-  forward(bottom_speed, BOTTOM_DC);
+  side_spin_speed = param.asInt();
+  side_spin(side_spin_speed);
+  // resetSpeed();
 }
 BLYNK_WRITE(V16) { //Location
   int location = param.asInt();
@@ -166,21 +157,47 @@ BLYNK_WRITE(V18) { //Stop
   }
 }
 
+void side_spin (int side_spin_speed){
+  int new_right_speed = right_speed;
+  int new_left_speed = left_speed;
+  int new_bottom_speed = bottom_speed;
+  if (side_spin_speed < 0){
+    new_right_speed = right_speed + side_spin_speed;
+    new_left_speed = left_speed - (side_spin_speed / 2);
+    new_bottom_speed  = bottom_speed + side_spin_speed;
+    new_right_speed = new_right_speed + ((-side_spin_speed / 5) * 2);
+    new_left_speed = new_left_speed + ((-side_spin_speed / 5) * 2);
+    new_bottom_speed = new_bottom_speed + ((-side_spin_speed / 5) * 2);
+  } else if (side_spin_speed > 0){
+    new_right_speed = right_speed + (side_spin_speed / 2);
+    new_left_speed = left_speed - side_spin_speed;
+    new_bottom_speed  = bottom_speed - side_spin_speed;
+    new_right_speed = new_right_speed + ((side_spin_speed / 5) * 2);
+    new_left_speed = new_left_speed + ((side_spin_speed / 5) * 2);
+    new_bottom_speed = new_bottom_speed + ((side_spin_speed / 5) * 2);
+  } 
+  forward(new_right_speed, RIGHT_DC);
+  forward(new_left_speed, LEFT_DC);
+  forward(new_bottom_speed, BOTTOM_DC);
+  if (speed >= 70 && speed <= 90 && side_spin_speed > 0){
+    top_servo.write(top_angle + 5);
+    Blynk.virtualWrite(V14, top_angle + 5);
+  } else {
+    top_servo.write(top_angle);
+    Blynk.virtualWrite(V14, top_angle);
+  }
+}
 void top_spin (int top_spin_speed){
-  right_speed = speed;
-  left_speed = speed;
-  bottom_speed = speed;
+  resetSpeed();
   right_speed = right_speed + top_spin_speed * 2;
   left_speed = left_speed + top_spin_speed * 2;
-  bottom_speed  = speed - top_spin_speed;
+  bottom_speed  = bottom_speed - top_spin_speed;
   forward(right_speed, RIGHT_DC);
   forward(left_speed, LEFT_DC);
   forward(bottom_speed, BOTTOM_DC);
 }
 void back_spin (int back_spin_speed){
-  right_speed = speed;
-  left_speed = speed;
-  bottom_speed = speed;
+  resetSpeed();
   right_speed = right_speed - back_spin_speed;
   left_speed = left_speed - back_spin_speed;
   bottom_speed  = bottom_speed + (back_spin_speed / 2);
@@ -236,6 +253,11 @@ void updateShooterGuage (int motor_pin, int pwm_rate){
   } else if (motor_pin == 13){
     Blynk.virtualWrite(V13, pwm_rate);
   }
+}
+void resetSpeed(){
+  right_speed = speed;
+  left_speed = speed;
+  bottom_speed = speed;
 }
 void randomSweep (){
   // Sweep back from low bound to high bound
@@ -307,9 +329,26 @@ void setup() {
   
   top_servo.write(0);
   bottom_servo.write(88);
+  Blynk.virtualWrite(V0, 0);
+  Blynk.virtualWrite(V1, 88);
+  Blynk.virtualWrite(V2, 0);
+  Blynk.virtualWrite(V3, 0);
+  Blynk.virtualWrite(V4, 0);
+  Blynk.virtualWrite(V5, 0);
+  Blynk.virtualWrite(V6, 0);
+  Blynk.virtualWrite(V7, 65);
+  Blynk.virtualWrite(V8, 0);
+  Blynk.virtualWrite(V9, 0);
+  Blynk.virtualWrite(V10, 0);
+  Blynk.virtualWrite(V11, 0);
+  Blynk.virtualWrite(V12, 0);
+  Blynk.virtualWrite(V13, 0);
   Blynk.virtualWrite(V14, 0);
   Blynk.virtualWrite(V15, 88);
-  }
+  Blynk.virtualWrite(V16, 0);
+  Blynk.virtualWrite(V17, 0);
+  Blynk.virtualWrite(V18, 0);
+}
 
 void loop() {
   if (sweep == 1){
